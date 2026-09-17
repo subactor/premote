@@ -99,4 +99,24 @@ class KVMController:
             return host_output_path
         finally:
             if os.path.exists(tmp_host_path):
-                os.remove(tmp_host_path)
+                try:
+                    os.unlink(tmp_host_path)
+                except OSError:
+                    pass
+
+    def screen_text(self, window_id: str | None = None) -> str:
+        tmp_img = f"/tmp/ocr-{os.getpid()}.png"
+        if window_id:
+            cmd = [
+                "bash",
+                "-c",
+                f"wmctrl -i -a {window_id} && sleep 0.2 && scrot -u {tmp_img} && tesseract {tmp_img} stdout 2>/dev/null; rm -f {tmp_img}",
+            ]
+        else:
+            cmd = [
+                "bash",
+                "-c",
+                f"scrot {tmp_img} && tesseract {tmp_img} stdout 2>/dev/null; rm -f {tmp_img}",
+            ]
+        res = self.container.run(cmd, env={"DISPLAY": self.display}, check=False)
+        return res.stdout.strip()

@@ -157,6 +157,12 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
                 print(f"{w.id:<12} {w.desktop:<8} {pos:<16} {w.title}")
             return 0
 
+        elif action in {"screen-text", "kvm-text", "ocr"}:
+            target_wid = args[0] if args else None
+            txt = kvm.screen_text(target_wid)
+            print(txt)
+            return 0
+
         elif action == "kvm-focus":
             pattern = args[0] if args else "Terminal"
             wid = kvm.focus(pattern)
