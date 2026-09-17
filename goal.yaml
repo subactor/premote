@@ -1,0 +1,36 @@
+# goal.yaml - Goal configuration file
+version: '1.0'
+project:
+  name: premote
+  type:
+  - python
+  description: Remote controller for Antigravity (agy) and desktop apps in Docker noVNC containers.
+versioning:
+  strategy: semver
+  files:
+  - VERSION
+  - pyproject.toml:version
+  - src/premote/__init__.py:__version__
+  bump_rules:
+    patch: 10
+    minor: 50
+    major: 200
+git:
+  commit:
+    strategy: conventional
+    scope: premote
+    abstraction_level: auto
+    domain_mapping:
+      src/*.py: core
+      tests/*: test
+      '*.md': docs
+      pyproject.toml: build
+      goal.yaml: config
+  push:
+    remote: origin
+    branch: main
+    tags: true
+publish:
+  registries:
+    github:
+      enabled: true

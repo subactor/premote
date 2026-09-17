@@ -1,0 +1,171 @@
+# premote
+
+Remote CLI & KVM controller for Google Antigravity (`agy`) and desktop applications in isolated Docker noVNC containers.
+
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://python.org)
+
+## Overview
+
+`premote` allows you to control, monitor, and automate AI coding agents (specifically **Google Antigravity CLI `agy`**) and desktop GUI applications running inside Docker noVNC containers directly from your host PC terminal.
+
+It provides two operation layers:
+1. **Direct Headless / CLI Layer**: Fast, non-interactive execution of prompts with auto-approval of permissions (`--dangerously-skip-permissions`), JSON output, session continuation, and live quota queries (`/quota`).
+2. **KVM / Desktop GUI Layer**: Live simulation of mouse and keyboard events on the X11 desktop displayed in noVNC (`http://127.0.0.1:<port>/vnc.html`), including window focus, keystrokes, mouse clicks, and screen capture.
+
+---
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/subactor/premote.git
+cd premote
+
+# Install locally in editable mode
+pip install -e .
+```
+
+---
+
+## Usage
+
+### Syntax
+```bash
+premote <account> <command> [arguments...]
+```
+
+### CLI / Agent Commands
+
+#### 1. Check Model Quotas & Limits
+View live remaining quota percentages and reset timers (Gemini, Claude, GPT):
+```bash
+premote prototypowanie quota
+```
+*Output:*
+```text
+GRUPA / BUCKET                 POZOSTAŁO    RESET                   
+--------------------------------------------------------------------
+[Gemini Models]
+  Weekly Limit Remaining       98%          2026-09-24T10:15:12Z    
+  Five Hour Limit Remaining    90%          2026-09-17T15:15:12Z    
+
+[Claude and GPT models]
+  Weekly Limit Remaining       100%         2026-09-24T13:27:31Z    
+  Five Hour Limit Remaining    100%         2026-09-17T18:27:31Z    
+```
+
+For automation / JSON parsing:
+```bash
+premote prototypowanie quota-json
+```
+
+#### 2. Execute Prompt with Auto-Approval
+Run a prompt with `--dangerously-skip-permissions` so it never blocks waiting for confirmation:
+```bash
+premote prototypowanie prompt "Napisz oneliner w bashu sprawdzający zużycie dysku"
+```
+
+Structured JSON response with token usage and conversation ID:
+```bash
+premote prototypowanie prompt-json "Podaj 3 zalety Dockera"
+```
+
+#### 3. Continue Previous Conversation
+```bash
+premote prototypowanie continue "Rozwiń drugi punkt"
+```
+
+#### 4. List Available AI Models
+```bash
+premote prototypowanie models
+```
+
+#### 5. Interactive Terminal / TUI
+```bash
+# Interactive bash shell inside container
+premote prototypowanie terminal
+
+# Interactive agy TUI in your terminal
+premote prototypowanie agy-interactive
+```
+
+---
+
+### KVM / Desktop GUI Commands (noVNC)
+
+#### 1. List Open Windows
+```bash
+premote prototypowanie kvm-windows
+```
+
+#### 2. Focus Window
+```bash
+premote prototypowanie kvm-focus "Terminal"
+```
+
+#### 3. Type Text into Active Window
+```bash
+premote prototypowanie kvm-type "echo 'Wpisane z PC' && agy models"
+```
+
+#### 4. Send Key Strokes (Navigation, Enter, Approvals)
+```bash
+# Press Enter
+premote prototypowanie kvm-key Return
+
+# Select option with Down arrow and Enter
+premote prototypowanie kvm-key Down
+premote prototypowanie kvm-key Return
+
+# Approve with 'y'
+premote prototypowanie kvm-key y
+premote prototypowanie kvm-key Return
+```
+
+#### 5. Click at Coordinates (X, Y)
+```bash
+premote prototypowanie kvm-click 800 500
+```
+
+#### 6. Take Screenshot of noVNC Desktop
+```bash
+premote prototypowanie kvm-capture screen.png
+```
+
+---
+
+## Python API
+
+You can also use `premote` directly inside Python applications:
+
+```python
+from premote import ContainerClient, AntigravityClient, KVMController
+
+# Connect to container
+container = ContainerClient("prototypowanie")
+agy = AntigravityClient(container)
+kvm = KVMController(container)
+
+# 1. Ask Antigravity a question
+result = agy.prompt("Napisz prostą funkcję hello world w Pythonie")
+print("Response:", result.response)
+
+# 2. Check model limits
+quota = agy.quota()
+for group in quota.groups:
+    print(f"Group: {group.name}")
+    for bucket in group.buckets:
+        print(f"  {bucket.name}: {bucket.remaining_percent}% (Resets: {bucket.reset_time})")
+
+# 3. Simulate GUI typing in noVNC
+kvm.focus("Terminal")
+kvm.type_text("ls -la")
+kvm.key("Return")
+```
+
+---
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) for details.
