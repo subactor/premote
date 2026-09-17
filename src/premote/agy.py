@@ -82,7 +82,7 @@ class AntigravityClient:
 
     def interactive(self) -> int:
         return self.container.interactive_shell(
-            ["agy"],
+            ["agy", "--dangerously-skip-permissions"],
             user="tom",
             cwd="/home/tom/github",
         )
