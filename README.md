@@ -5,6 +5,21 @@ Remote CLI & KVM controller for Google Antigravity (`agy`) and desktop applicati
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-green.svg)](https://python.org)
 
+
+## AI Cost Tracking
+
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.1.1-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![AI Cost](https://img.shields.io/badge/AI%20Cost-$0.03-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-1.0h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
+
+- 🤖 **LLM usage:** $0.0271 (1 commits)
+- 👤 **Human dev:** ~$100 (1.0h @ $100/h, 30min dedup)
+
+Generated on 2026-09-17 using [openrouter/qwen/qwen3-coder-next](https://openrouter.ai/qwen/qwen3-coder-next)
+
+---
+
+
+
 ## Overview
 
 `premote` allows you to control, monitor, and automate AI coding agents (specifically **Google Antigravity CLI `agy`**) and desktop GUI applications running inside Docker noVNC containers directly from your host PC terminal.
@@ -168,4 +183,4 @@ kvm.key("Return")
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE) for details.
+Licensed under Apache-2.0.

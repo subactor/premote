@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "premote"
-version = "0.1.0"
+version = "0.1.1"
 description = "Remote CLI and KVM controller for Google Antigravity (agy) and desktop apps in isolated Docker noVNC containers."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
-authors = [{name = "Subactor", email = "info@subactor.com"}]
+authors = [{name = "Subactor", email = "info@subactor.com"}, {name = "Tom Sapletta",email = "tom@sapletta.com"}]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -39,3 +39,16 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-ra"
+
+[tool.costs]
+# AI Cost tracking configuration
+badge = true
+update_readme = true
+readme_path = "README.md"
+default_model = "openrouter/qwen/qwen3-coder-next"
+analysis_mode = "byok"
+full_history = true
+max_commits = 500
+
+# Cost thresholds for badge colors (USD)
+badge_color_thresholds = { low = 1.0, medium = 5.0, high = 10.0, critical = 50.0 }

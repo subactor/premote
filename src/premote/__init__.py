@@ -5,7 +5,7 @@ from premote.client import ContainerClient, ContainerError, list_active_accounts
 from premote.kvm import KVMController
 from premote.models import PromptResult, QuotaBucket, QuotaGroup, QuotaReport, WindowInfo
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "__version__",
