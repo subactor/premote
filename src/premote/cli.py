@@ -8,6 +8,7 @@ from premote import __version__
 from premote.agy import AntigravityClient
 from premote.client import ContainerClient, ContainerError, list_active_accounts
 from premote.kvm import KVMController
+from premote.planfile import format_task_prompt, list_planfile_tasks, load_planfile
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -194,9 +195,109 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
             print(f"Zapisano zrzut ekranu do: {out_file}")
             return 0
 
+        elif action in {"planfile-tasks", "tasks"}:
+            plan_path = args[0] if args else "planfile.yaml"
+            data = load_planfile(plan_path)
+            tasks = list_planfile_tasks(data)
+            print(f"{'SPRINT':<12} {'TASK ID':<20} {'PRIORYTET':<10} {'NAZWA'}")
+            print("-" * 75)
+            for t in tasks:
+                print(f"{t['sprint_id']:<12} {t['id']:<20} {t['priority']:<10} {t['name']}")
+            return 0
+
+        elif action == "planfile-prompt":
+            if not args:
+                print("Błąd: Podaj task_id, np. premote <konto> planfile-prompt ticket-1234 [planfile.yaml]", file=sys.stderr)
+                return 1
+            task_id = args[0]
+            plan_path = args[1] if len(args) > 1 else "planfile.yaml"
+            data = load_planfile(plan_path)
+            tasks = list_planfile_tasks(data)
+            matching = [t for t in tasks if t["id"] == task_id or task_id in t["name"]]
+            if not matching:
+                print(f"Nie znaleziono zadania '{task_id}' w {plan_path}", file=sys.stderr)
+                return 1
+            prompt_text = format_task_prompt(matching[0])
+            print(prompt_text)
+            return 0
+
+        elif action == "planfile-run":
+            if not args:
+                print("Błąd: Podaj task_id, np. premote <konto> planfile-run ticket-1234 [planfile.yaml]", file=sys.stderr)
+                return 1
+            task_id = args[0]
+            plan_path = args[1] if len(args) > 1 else "planfile.yaml"
+            data = load_planfile(plan_path)
+            tasks = list_planfile_tasks(data)
+            matching = [t for t in tasks if t["id"] == task_id or task_id in t["name"]]
+            if not matching:
+                print(f"Nie znaleziono zadania '{task_id}' w {plan_path}", file=sys.stderr)
+                return 1
+            task = matching[0]
+            prompt_text = format_task_prompt(task)
+            print(f"=== Uruchamianie zadania: {task['id']} - {task['name']} ===")
+            res = agy.prompt(prompt_text, auto_approve=True, output_format="text")
+            print(res.response)
+            return 0
+
+        elif action == "planfile-next":
+            plan_path = args[0] if args else "planfile.yaml"
+            data = load_planfile(plan_path)
+            tasks = list_planfile_tasks(data)
+            if not tasks:
+                print(f"Brak zadań w {plan_path}", file=sys.stderr)
+                return 1
+            task = tasks[0]
+            prompt_text = format_task_prompt(task)
+            print(f"=== Wybrano pierwsze zadanie: {task['id']} - {task['name']} ===")
+            res = agy.prompt(prompt_text, auto_approve=True, output_format="text")
+            print(res.response)
+            return 0
+
+        elif action == "auto-approve-all":
+            setup_script = """set -e
+mkdir -p /home/tom/.gemini/antigravity-cli /home/browser/.gemini/antigravity-cli
+SETTINGS='{
+  "permissions": {
+    "allowedTools": [
+      "Bash",
+      "command(*)",
+      "editFile(*)",
+      "readFile(*)",
+      "writeFile(*)",
+      "listDir(*)",
+      "grepSearch(*)",
+      "findFiles(*)",
+      "terminalAction(*)"
+    ]
+  }
+}'
+echo "$SETTINGS" > /home/tom/.gemini/antigravity-cli/settings.json
+echo "$SETTINGS" > /home/browser/.gemini/antigravity-cli/settings.json
+chown -R tom:tom /home/tom/.gemini
+chown -R browser:browser /home/browser/.gemini
+
+for u in tom browser; do
+  touch "/home/$u/.bash_aliases"
+  for al in 'alias agy="agy --dangerously-skip-permissions"' 'alias gemini="gemini -y"' 'alias claude="claude --dangerously-skip-permissions"' 'alias aider="aider --yes"'; do
+    if ! grep -Fq "$al" "/home/$u/.bash_aliases"; then
+      echo "$al" >> "/home/$u/.bash_aliases"
+    fi
+  done
+  chown $u:$u "/home/$u/.bash_aliases"
+done
+echo "Auto-approval configuration applied successfully."
+"""
+            res = container.run(["bash", "-c", setup_script], user="root", check=False)
+            if res.stdout:
+                sys.stdout.write(res.stdout)
+            if res.stderr:
+                sys.stderr.write(res.stderr)
+            return res.returncode
+
         else:
             print(f"Nieznana akcja: {action}", file=sys.stderr)
-            print("Dostępne akcje: prompt, prompt-json, continue, quota, quota-json, models, terminal, agy-interactive, exec, kvm-windows, kvm-focus, kvm-type, kvm-key, kvm-click, kvm-capture", file=sys.stderr)
+            print("Dostępne akcje: prompt, prompt-json, continue, quota, quota-json, models, terminal, agy-interactive, exec, kvm-windows, kvm-focus, kvm-type, kvm-key, kvm-click, kvm-capture, screen-text, planfile-tasks, planfile-prompt, planfile-run, planfile-next, auto-approve-all", file=sys.stderr)
             return 1
 
     except ContainerError as e:

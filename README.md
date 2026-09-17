@@ -8,7 +8,7 @@ Remote CLI & KVM controller for Google Antigravity (`agy`) and desktop applicati
 
 ## AI Cost Tracking
 
-![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.1.1-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![PyPI](https://img.shields.io/badge/pypi-costs-blue) ![Version](https://img.shields.io/badge/version-0.1.2-blue) ![Python](https://img.shields.io/badge/python-3.9+-blue) ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ![AI Cost](https://img.shields.io/badge/AI%20Cost-$0.03-orange) ![Human Time](https://img.shields.io/badge/Human%20Time-1.0h-blue) ![Model](https://img.shields.io/badge/Model-openrouter%2Fqwen%2Fqwen3--coder--next-lightgrey)
 
 - 🤖 **LLM usage:** $0.0271 (1 commits)
@@ -143,9 +143,51 @@ premote prototypowanie kvm-key Return
 premote prototypowanie kvm-click 800 500
 ```
 
-#### 6. Take Screenshot of noVNC Desktop
+#### 6. Read Text from Screen (OCR)
+Fast OCR extraction (under 4s) of terminal or any GUI window content:
+```bash
+# Read whole desktop
+premote prototypowanie screen-text
+
+# Read specific window by X11 window ID
+premote prototypowanie screen-text 0x01600003
+```
+
+#### 7. Take Screenshot of noVNC Desktop
 ```bash
 premote prototypowanie kvm-capture screen.png
+```
+
+---
+
+### Unattended Execution & Permissions
+
+To run fully autonomous agents without any user prompts for shell execution, package installation, or code edits:
+
+```bash
+# Automatically configures ~/.gemini/antigravity-cli/settings.json permissions
+# and creates aliases (agy, gemini -y, claude, aider) for unattended operation:
+premote prototypowanie auto-approve-all
+```
+
+---
+
+### Planfile / Long-Cycle Task Automation
+
+Execute structured multi-sprint task plans (`planfile.yaml`) autonomously:
+
+```bash
+# 1. List tasks in planfile.yaml
+premote prototypowanie planfile-tasks [path/to/planfile.yaml]
+
+# 2. View generated agent prompt for a specific task
+premote prototypowanie planfile-prompt ticket-101 [path/to/planfile.yaml]
+
+# 3. Execute specific task with Antigravity
+premote prototypowanie planfile-run ticket-101 [path/to/planfile.yaml]
+
+# 4. Automatically run the next task
+premote prototypowanie planfile-next [path/to/planfile.yaml]
 ```
 
 ---
