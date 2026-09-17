@@ -192,12 +192,54 @@ premote prototypowanie planfile-next [path/to/planfile.yaml]
 
 ---
 
+### Autopilot: Automatic Dialog & Consent Approval
+
+The autopilot watches terminal screens via OCR and automatically approves dialogs, `(y/n)` prompts, permission requests, and consent screens using pattern-matched xdotool keystroke injection:
+
+```bash
+# Start autopilot with default settings (5s poll, unlimited)
+premote prototypowanie autopilot
+
+# Custom interval and max iterations
+premote prototypowanie autopilot --interval 3 --max-iterations 100
+
+# Quiet mode (no verbose output)
+premote prototypowanie autopilot --quiet
+```
+
+**Built-in rules** handle prompts from: agy, gemini, claude, aider, npm, pip — including `(y/n)`, `[yes/no]`, `Allow once`, `Press Enter to continue`, `Apply this edit?`, `Proceed? (y)`, and numbered option selectors.
+
+#### How it works:
+1. Every `--interval` seconds, autopilot runs OCR on the noVNC screen
+2. Each OCR text is matched against priority-sorted rules
+3. When a rule matches and its cooldown has elapsed, the configured keystroke is injected
+4. Stops on `Ctrl+C` or after `--max-iterations` cycles
+
+---
+
+### Tmux Session Management
+
+Run agents in detached tmux sessions inside containers for long-running, resilient execution:
+
+```bash
+# Start an agent in a detached tmux session
+premote prototypowanie tmux-run 'agy --dangerously-skip-permissions -p "Build the project"'
+
+# Check session status and see recent output
+premote prototypowanie session-status
+
+# Attach to the running session interactively
+premote prototypowanie exec tmux attach -t premote-auto
+```
+
+---
+
 ## Python API
 
 You can also use `premote` directly inside Python applications:
 
 ```python
-from premote import ContainerClient, AntigravityClient, KVMController
+from premote import ContainerClient, AntigravityClient, KVMController, create_autopilot
 
 # Connect to container
 container = ContainerClient("prototypowanie")
@@ -219,6 +261,10 @@ for group in quota.groups:
 kvm.focus("Terminal")
 kvm.type_text("ls -la")
 kvm.key("Return")
+
+# 4. Start autopilot programmatically
+session = create_autopilot("prototypowanie", poll_interval=5.0)
+session.run()  # Blocks until Ctrl+C or max_iterations
 ```
 
 ---
@@ -226,3 +272,4 @@ kvm.key("Return")
 ## License
 
 Licensed under Apache-2.0.
+
