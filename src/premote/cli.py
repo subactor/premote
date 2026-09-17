@@ -6,6 +6,7 @@ import sys
 
 from premote import __version__
 from premote.agy import AntigravityClient
+from premote.autopilot import create_autopilot
 from premote.client import ContainerClient, ContainerError, list_active_accounts
 from premote.kvm import KVMController
 from premote.planfile import format_task_prompt, list_planfile_tasks, load_planfile
@@ -295,9 +296,101 @@ echo "Auto-approval configuration applied successfully."
                 sys.stderr.write(res.stderr)
             return res.returncode
 
+        elif action == "autopilot":
+            interval = 5.0
+            max_iter = 0
+            # Parse optional flags: --interval N --max-iterations N --quiet
+            quiet = False
+            remaining_args = list(args)
+            while remaining_args:
+                if remaining_args[0] == "--interval" and len(remaining_args) > 1:
+                    interval = float(remaining_args[1])
+                    remaining_args = remaining_args[2:]
+                elif remaining_args[0] == "--max-iterations" and len(remaining_args) > 1:
+                    max_iter = int(remaining_args[1])
+                    remaining_args = remaining_args[2:]
+                elif remaining_args[0] in ("--quiet", "-q"):
+                    quiet = True
+                    remaining_args = remaining_args[1:]
+                else:
+                    remaining_args = remaining_args[1:]
+
+            session = create_autopilot(
+                account,
+                poll_interval=interval,
+                max_iterations=max_iter,
+                verbose=not quiet,
+            )
+            total = session.run()
+            print(f"\n[autopilot] Session ended. Total actions: {total}")
+            return 0
+
+        elif action == "tmux-run":
+            if not args:
+                print("Błąd: Podaj komendę, np. premote <konto> tmux-run 'agy -p \"zbuduj hello world\"'", file=sys.stderr)
+                return 1
+            session_name = "premote-auto"
+            cmd_str = " ".join(args)
+            # Create or reuse a detached tmux session
+            tmux_cmd = (
+                f"tmux has-session -t {session_name} 2>/dev/null && "
+                f"tmux send-keys -t {session_name} C-c 2>/dev/null; "
+                f"tmux kill-session -t {session_name} 2>/dev/null; "
+                f"tmux new-session -d -s {session_name} '{cmd_str}'"
+            )
+            res = container.run(
+                ["bash", "-c", tmux_cmd],
+                user="tom",
+                cwd="/home/tom/github",
+                env={"DISPLAY": ":1", "HOME": "/home/tom"},
+                check=False,
+            )
+            if res.returncode == 0:
+                print(f"Sesja tmux '{session_name}' uruchomiona w kontenerze '{account}'.")
+                print(f"  Podłącz się: premote {account} exec tmux attach -t {session_name}")
+                print(f"  Status:      premote {account} session-status")
+            else:
+                print(f"Błąd uruchamiania sesji tmux: {res.stderr or res.stdout}", file=sys.stderr)
+            return res.returncode
+
+        elif action == "session-status":
+            session_name = args[0] if args else "premote-auto"
+            # Check tmux session status
+            status_cmd = f"tmux has-session -t {session_name} 2>/dev/null && echo 'RUNNING' || echo 'STOPPED'"
+            res = container.run(
+                ["bash", "-c", status_cmd],
+                user="tom",
+                env={"HOME": "/home/tom"},
+                check=False,
+            )
+            status = res.stdout.strip()
+            print(f"Sesja '{session_name}': {status}")
+
+            if status == "RUNNING":
+                # Get last few lines of tmux output
+                capture_cmd = f"tmux capture-pane -t {session_name} -p 2>/dev/null | tail -20"
+                cap_res = container.run(
+                    ["bash", "-c", capture_cmd],
+                    user="tom",
+                    env={"HOME": "/home/tom"},
+                    check=False,
+                )
+                if cap_res.stdout.strip():
+                    print(f"\n--- Ostatnie linie wyjścia ---")
+                    print(cap_res.stdout.strip())
+                    print("--- koniec ---")
+            return 0
+
         else:
             print(f"Nieznana akcja: {action}", file=sys.stderr)
-            print("Dostępne akcje: prompt, prompt-json, continue, quota, quota-json, models, terminal, agy-interactive, exec, kvm-windows, kvm-focus, kvm-type, kvm-key, kvm-click, kvm-capture, screen-text, planfile-tasks, planfile-prompt, planfile-run, planfile-next, auto-approve-all", file=sys.stderr)
+            all_actions = (
+                "prompt, prompt-json, continue, quota, quota-json, models, "
+                "terminal, agy-interactive, exec, "
+                "kvm-windows, kvm-focus, kvm-type, kvm-key, kvm-click, kvm-capture, screen-text, "
+                "planfile-tasks, planfile-prompt, planfile-run, planfile-next, "
+                "auto-approve-all, autopilot, tmux-run, session-status"
+            )
+            print(f"Dostępne akcje: {all_actions}", file=sys.stderr)
             return 1
 
     except ContainerError as e:
