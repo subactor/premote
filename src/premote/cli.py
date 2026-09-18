@@ -61,6 +61,24 @@ def format_quota(report) -> str:
 def run_account_action(account: str, action: str, args: list[str]) -> int:
     container = ContainerClient(account)
     if not container.is_running():
+        # Fallback na natywny Google Antigravity (AGY) na maszynie bare-metal
+        import shutil
+        if shutil.which("agy"):
+            if action in {"prompt", "prompt-json", "continue"}:
+                prompt_text = " ".join(args)
+                try:
+                    cmd = ["agy", "--dangerously-skip-permissions", "-p", prompt_text]
+                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+                    if res.returncode == 0:
+                        print(res.stdout.strip())
+                        return 0
+                    else:
+                        print(res.stderr or res.stdout, file=sys.stderr)
+                        return res.returncode
+                except Exception as e:
+                    print(f"Błąd uruchomienia bare-metal agy: {e}", file=sys.stderr)
+                    return 1
+
         active = list_active_accounts()
         print(f"Błąd: Kontener '{container.container_name}' nie działa.", file=sys.stderr)
         if active:
