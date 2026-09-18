@@ -299,7 +299,8 @@ echo "Auto-approval configuration applied successfully."
         elif action == "autopilot":
             interval = 5.0
             max_iter = 0
-            # Parse optional flags: --interval N --max-iterations N --quiet
+            decider_mode = "llm"
+            # Parse optional flags: --interval N --max-iterations N --quiet --decider MODE
             quiet = False
             remaining_args = list(args)
             while remaining_args:
@@ -309,17 +310,25 @@ echo "Auto-approval configuration applied successfully."
                 elif remaining_args[0] == "--max-iterations" and len(remaining_args) > 1:
                     max_iter = int(remaining_args[1])
                     remaining_args = remaining_args[2:]
+                elif remaining_args[0] == "--decider" and len(remaining_args) > 1:
+                    decider_mode = remaining_args[1]
+                    remaining_args = remaining_args[2:]
                 elif remaining_args[0] in ("--quiet", "-q"):
                     quiet = True
                     remaining_args = remaining_args[1:]
                 else:
                     remaining_args = remaining_args[1:]
 
+            if decider_mode not in ("llm", "regex"):
+                print(f"Błąd: Nieznany tryb decidera: {decider_mode!r} (dozwolone: llm, regex)", file=sys.stderr)
+                return 2
+
             session = create_autopilot(
                 account,
                 poll_interval=interval,
                 max_iterations=max_iter,
                 verbose=not quiet,
+                decider=decider_mode,
             )
             total = session.run()
             print(f"\n[autopilot] Session ended. Total actions: {total}")

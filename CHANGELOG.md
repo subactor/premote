@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Autopilot dialog decider (STARTER-131)**: default decision path is now a lightweight
+  LLM/SLM dialog-state classifier (`premote.dialog_decider.DialogDecider`) answering in a
+  strict fail-closed NL -> Action DSL (`state`/`decision`/`action`/`value`/`reason`),
+  replacing the 11 rigid `DEFAULT_RULES` regex heuristics on the default path
+- `premote <acc> autopilot --decider llm|regex` selects the decision mode (default `llm`);
+  the legacy regex rule set stays available as an explicit offline fallback
+- Decider transport is any OpenAI-compatible endpoint (`PREMOTE_LLM_BASE_URL`,
+  `PREMOTE_LLM_MODEL`, `PREMOTE_LLM_API_KEY` / `OPENROUTER_API_KEY`)
+
+### Added
+- `premote.dialog_decider` module: Action DSL schema, fail-closed validator, JSON
+  extraction tolerant of fenced model answers, per-state cooldown in `AutopilotSession`
+- 15 unit tests for decider validation, fail-closed behaviour and session integration
+
 ## [0.1.3] - 2026-09-17
 
 ### Added

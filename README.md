@@ -194,25 +194,41 @@ premote prototypowanie planfile-next [path/to/planfile.yaml]
 
 ### Autopilot: Automatic Dialog & Consent Approval
 
-The autopilot watches terminal screens via OCR and automatically approves dialogs, `(y/n)` prompts, permission requests, and consent screens using pattern-matched xdotool keystroke injection:
+The autopilot watches terminal screens via OCR and automatically approves dialogs, `(y/n)` prompts, permission requests, and consent screens:
 
 ```bash
-# Start autopilot with default settings (5s poll, unlimited)
+# Start autopilot with default settings (5s poll, unlimited, LLM dialog decider)
 premote prototypowanie autopilot
 
 # Custom interval and max iterations
 premote prototypowanie autopilot --interval 3 --max-iterations 100
 
+# Legacy offline mode using built-in regex rules instead of the LLM decider
+premote prototypowanie autopilot --decider regex
+
 # Quiet mode (no verbose output)
 premote prototypowanie autopilot --quiet
 ```
 
-**Built-in rules** handle prompts from: agy, gemini, claude, aider, npm, pip — including `(y/n)`, `[yes/no]`, `Allow once`, `Press Enter to continue`, `Apply this edit?`, `Proceed? (y)`, and numbered option selectors.
+By default (`--decider llm`) each OCR snapshot is classified by a lightweight LLM/SLM
+dialog-state decider that answers in a strict **NL -> Action DSL** (`state`, `decision`,
+`action`, `value`, `reason`). Parsing is fail-closed: transport failures, malformed
+answers or unsafe values never inject keystrokes. The decider uses any
+OpenAI-compatible endpoint configured via environment variables:
+
+```bash
+PREMOTE_LLM_BASE_URL=https://openrouter.ai/api/v1
+PREMOTE_LLM_MODEL=openrouter/qwen/qwen3-coder-next
+PREMOTE_LLM_API_KEY=...            # falls back to OPENROUTER_API_KEY
+```
+
+The legacy regex rule set (agy, gemini, claude, aider, npm, pip prompts) remains
+available as an explicit offline fallback via `--decider regex`.
 
 #### How it works:
 1. Every `--interval` seconds, autopilot runs OCR on the noVNC screen
-2. Each OCR text is matched against priority-sorted rules
-3. When a rule matches and its cooldown has elapsed, the configured keystroke is injected
+2. The dialog decider classifies the screen into a canonical dialog state and returns one Action DSL decision
+3. Valid approvals are injected after a per-state cooldown elapses
 4. Stops on `Ctrl+C` or after `--max-iterations` cycles
 
 ---

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from premote.client import ContainerClient
+from premote.dialog_decider import DialogAction, DialogDecider
 from premote.kvm import KVMController
 
 
@@ -35,7 +36,10 @@ class AutopilotRule:
         return (now - self.last_triggered) >= self.cooldown_seconds
 
 
-# Default rules for common LLM agent confirmation dialogs
+# Default rules for common LLM agent confirmation dialogs.
+# Legacy decision path: kept only as an explicit opt-in for offline use
+# (`decider="regex"` / `--decider regex`). The default path is the
+# NL -> Action DSL dialog decider in premote.dialog_decider.
 DEFAULT_RULES: list[dict] = [
     # Antigravity / agy permission prompts
     {
@@ -152,6 +156,9 @@ class AutopilotSession:
     max_iterations: int = 0  # 0 = unlimited
     verbose: bool = True
     on_action: Callable[[str, str, str], None] | None = None  # callback(rule_name, action, text_snippet)
+    decider: DialogDecider | None = None
+    decider_cooldown_seconds: float = 3.0
+    _decider_last_triggered: dict[str, float] = field(default_factory=dict)
 
     def _apply_action(self, rule: AutopilotRule) -> None:
         """Apply the action defined by a rule."""
@@ -169,6 +176,42 @@ class AutopilotSession:
             if self.verbose:
                 print(f"  [autopilot] Unknown action type: {rule.action}")
 
+    def _apply_dialog_action(self, dialog: DialogAction) -> None:
+        """Apply one Action DSL decision produced by the dialog decider."""
+        if dialog.action == "key":
+            for key_name in dialog.value.split("+"):
+                self.kvm.key(key_name.strip())
+                time.sleep(0.1)
+        elif dialog.action == "type":
+            self.kvm.type_text(dialog.value, delay_ms=30)
+        elif dialog.action == "click":
+            parts = dialog.value.split(",")
+            if len(parts) == 2:
+                self.kvm.click(int(parts[0].strip()), int(parts[1].strip()))
+
+    def _run_once_decider(self, screen: str, now: float) -> str | None:
+        """One poll cycle through the NL -> Action DSL dialog decider."""
+        dialog = self.decider.decide(screen) if self.decider else None
+        if dialog is None or not dialog.is_approval:
+            return None
+
+        last = self._decider_last_triggered.get(dialog.state, 0.0)
+        if (now - last) < self.decider_cooldown_seconds:
+            return None
+
+        if self.verbose:
+            snippet = screen[-120:].replace("\n", " ")
+            print(f"  [autopilot] Decider: {dialog.state} → {dialog.action}({dialog.value!r}) [{dialog.reason}]")
+            print(f"              Screen tail: ...{snippet}")
+
+        self._apply_dialog_action(dialog)
+        self._decider_last_triggered[dialog.state] = now
+
+        if self.on_action:
+            self.on_action(dialog.state, dialog.action, screen[-200:])
+
+        return dialog.state
+
     def run_once(self) -> str | None:
         """Run a single poll cycle. Returns the triggered rule name, or None."""
         try:
@@ -182,6 +225,10 @@ class AutopilotSession:
             return None
 
         now = time.time()
+
+        if self.decider is not None:
+            return self._run_once_decider(screen, now)
+
         for rule in self.rules:
             if rule.matches(screen) and rule.can_trigger(now):
                 if self.verbose:
@@ -238,6 +285,7 @@ def create_autopilot(
     max_iterations: int = 0,
     verbose: bool = True,
     extra_rules: list[dict] | None = None,
+    decider: str = "llm",
 ) -> AutopilotSession:
     """Create an autopilot session for a container account.
 
@@ -246,13 +294,23 @@ def create_autopilot(
         poll_interval: Seconds between OCR polls.
         max_iterations: Max poll cycles (0=unlimited).
         verbose: Print action logs to stdout.
-        extra_rules: Additional rules as dicts with name/pattern/action/value.
+        extra_rules: Additional rules as dicts with name/pattern/action/value
+            (legacy regex path only).
+        decider: Decision path - "llm" (default) classifies dialogs with the
+            NL -> Action DSL dialog decider; "regex" keeps the legacy
+            rule-matching path for offline use.
 
     Returns:
         AutopilotSession ready to be started with .run() or .run_once().
     """
     container = ContainerClient(account)
     kvm = KVMController(container)
+
+    session_decider: DialogDecider | None = None
+    if decider == "llm":
+        session_decider = DialogDecider()
+    elif decider != "regex":
+        raise ValueError(f"Unknown decider mode: {decider!r} (expected 'llm' or 'regex')")
 
     rules = build_default_rules()
     if extra_rules:
@@ -275,4 +333,5 @@ def create_autopilot(
         poll_interval=poll_interval,
         max_iterations=max_iterations,
         verbose=verbose,
+        decider=session_decider,
     )
