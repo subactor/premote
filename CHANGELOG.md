@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.4] - 2026-09-18
 
 ### Changed
 - **Autopilot dialog decider (STARTER-131)**: default decision path is now a lightweight
@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `premote.dialog_decider` module: Action DSL schema, fail-closed validator, JSON
   extraction tolerant of fenced model answers, per-state cooldown in `AutopilotSession`
 - 15 unit tests for decider validation, fail-closed behaviour and session integration
+- Native bare-metal `agy` fallback when container is not running, with auto-detected `DISPLAY` and browser task optimization
+- KVM & Autopilot enhancements: removed `--sync` from `windowactivate` to prevent Openbox hangs, direct key combo passthrough to `xdotool`, and auto-submission of trailing newlines
 
 ## [0.1.3] - 2026-09-17
 

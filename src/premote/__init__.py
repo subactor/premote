@@ -7,7 +7,7 @@ from premote.kvm import KVMController
 from premote.models import PromptResult, QuotaBucket, QuotaGroup, QuotaReport, WindowInfo
 from premote.planfile import format_task_prompt, list_planfile_tasks, load_planfile
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 __all__ = [
     "__version__",
