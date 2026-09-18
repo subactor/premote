@@ -483,7 +483,16 @@ def main() -> int:
         print(f"premote v{__version__} - diagnostyka:")
         print(f"  Docker CLI: {'OK' if ContainerClient('test').is_running() or True else 'BRAK'}")
         print(f"  Aktywne kontenery ({len(accounts)}): {', '.join(accounts) if accounts else 'brak'}")
+        try:
+            from vnclone.verifier import VNCVerifier
+            print("  Weryfikator noVNC (vnclone): Dostępny")
+            rep = VNCVerifier.verify_system_configuration("127.0.0.1", novnc_port=6084)
+            passed_checks = sum(1 for c in rep if c.passed)
+            print(f"  Konfiguracja lokalna noVNC (:6084): {passed_checks}/{len(rep)} testów zaliczonych")
+        except ImportError:
+            print("  Weryfikator noVNC (vnclone): Niedostępny (opcjonalny)")
         return 0
+
 
     if first_arg in {"mcp", "mcp-server"}:
         from premote.mcp_server import main as mcp_main
