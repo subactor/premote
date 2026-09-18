@@ -63,6 +63,7 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
     if not container.is_running():
         # Fallback na natywny Google Antigravity (AGY) na maszynie bare-metal
         import shutil
+        import subprocess
         if shutil.which("agy"):
             if action in {"prompt", "prompt-json", "continue"}:
                 prompt_text = " ".join(args)
