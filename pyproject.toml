@@ -33,6 +33,7 @@ test = [
 
 [project.scripts]
 premote = "premote.cli:main"
+premote-mcp = "premote.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

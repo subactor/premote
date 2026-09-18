@@ -485,15 +485,28 @@ def main() -> int:
         print(f"  Aktywne kontenery ({len(accounts)}): {', '.join(accounts) if accounts else 'brak'}")
         return 0
 
+    if first_arg in {"mcp", "mcp-server"}:
+        from premote.mcp_server import main as mcp_main
+        return mcp_main()
+
     # Otherwise first argument is <account>
     account = first_arg
+    from premote.nl_dsl import parse_nl_to_dsl
+
     if len(sys.argv) < 3:
         # Default to interactive terminal
         action = "terminal"
         action_args: list[str] = []
     else:
-        action = sys.argv[2]
-        action_args = sys.argv[3:]
+        # Check if the remaining arguments form a natural language instruction
+        joined_tail = " ".join(sys.argv[2:])
+        dsl_cmd = parse_nl_to_dsl(joined_tail, account=account)
+        if dsl_cmd and dsl_cmd.source != "default_fallback":
+            action = dsl_cmd.action
+            action_args = dsl_cmd.args
+        else:
+            action = sys.argv[2]
+            action_args = sys.argv[3:]
 
     return run_account_action(account, action, action_args)
 

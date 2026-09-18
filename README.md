@@ -250,6 +250,53 @@ premote prototypowanie exec tmux attach -t premote-auto
 
 ---
 
+### Natural Language DSL (`wellmanifest/nl-dsl-llm`)
+
+`premote` natively complies with the `wellmanifest/nl-dsl-llm` standard. You can pass natural language instructions in Polish or English directly on the command line; they are automatically parsed via a deterministic fast-path regex layer, with LLM fallback:
+
+```bash
+# Check quota / limits in natural language:
+premote prototypowanie "ile mam limitu"
+premote prototypowanie "sprawdź limity modeli"
+premote prototypowanie "check remaining quotas"
+
+# Screen capture:
+premote prototypowanie "zrób zrzut ekranu do /tmp/screen.png"
+premote prototypowanie "take a screenshot"
+
+# KVM clicks and keystrokes:
+premote prototypowanie "kliknij w pozycję 400 300"
+premote prototypowanie "wpisz w oknie git status"
+premote prototypowanie "naciśnij klawisz Return"
+premote prototypowanie "aktywuj okno Terminal"
+
+# Autopilot:
+premote prototypowanie "uruchom autopilota"
+premote prototypowanie "start autopilot"
+```
+
+---
+
+### Model Context Protocol (MCP) Server
+
+`premote` includes a compliant MCP server exposing tools over stdio for AI agents and LLM workspaces (e.g. Claude Desktop, Antigravity, Cursor):
+
+```bash
+# Run stdio MCP server directly
+premote mcp
+# or via entrypoint:
+premote-mcp
+```
+
+#### Available MCP Tools:
+- `premote_execute_nl(account, instruction)`: Parse & execute NL instruction per `wellmanifest/nl-dsl-llm`.
+- `premote_quota(account, as_json)`: Check remaining model tokens and reset dates.
+- `premote_prompt(account, prompt, continue_session)`: Headless prompt execution with `--dangerously-skip-permissions`.
+- `premote_kvm(account, subaction, ...)`: Direct KVM control (click, type, key, screenshot, focus).
+- `premote_list_accounts()`: List all active Docker container accounts.
+
+---
+
 ## Python API
 
 You can also use `premote` directly inside Python applications:
