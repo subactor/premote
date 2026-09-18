@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import re
+import unittest
 
 from premote.autopilot import AutopilotRule, build_default_rules
 
 
-class TestAutopilotRule:
+class TestAutopilotRule(unittest.TestCase):
     def test_matches_yn_prompt(self) -> None:
         rule = AutopilotRule(
             name="test-yn",
@@ -53,7 +54,7 @@ class TestAutopilotRule:
         assert not rule.matches("Not a prompt")
 
 
-class TestDefaultRules:
+class TestDefaultRules(unittest.TestCase):
     def test_default_rules_build(self) -> None:
         rules = build_default_rules()
         assert len(rules) > 0

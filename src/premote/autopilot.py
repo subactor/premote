@@ -156,7 +156,7 @@ class AutopilotSession:
     max_iterations: int = 0  # 0 = unlimited
     verbose: bool = True
     on_action: Callable[[str, str, str], None] | None = None  # callback(rule_name, action, text_snippet)
-    decider: DialogDecider | None = None
+    decider: DialogDecider | None = field(default_factory=DialogDecider)
     decider_cooldown_seconds: float = 3.0
     _decider_last_triggered: dict[str, float] = field(default_factory=dict)
 

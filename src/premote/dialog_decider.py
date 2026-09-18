@@ -205,17 +205,20 @@ class DialogDecider:
         self.model = (
             model
             or os.environ.get("PREMOTE_LLM_MODEL")
+            or os.environ.get("TASKAND_LLM_MODEL")
             or os.environ.get("LLM_MODEL")
             or _DEFAULT_MODEL
         )
         self.base_url = (
             base_url
             or os.environ.get("PREMOTE_LLM_BASE_URL")
+            or os.environ.get("TASKAND_LLM_API_BASE")
             or "https://openrouter.ai/api/v1"
         ).rstrip("/")
         self.api_key = (
             api_key
             or os.environ.get("PREMOTE_LLM_API_KEY")
+            or os.environ.get("TASKAND_LLM_API_KEY")
             or os.environ.get("OPENROUTER_API_KEY")
             or ""
         )
