@@ -68,31 +68,39 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
         if shutil.which("agy"):
             if action in {"prompt", "prompt-json", "continue"}:
                 prompt_text = " ".join(args)
-                env = os.environ.copy()
-                if not env.get("DISPLAY"):
-                    try:
-                        vnc_proc = subprocess.check_output(["pgrep", "-a", "Xtigervnc"], text=True)
-                        for line in vnc_proc.splitlines():
-                            for p in line.split():
-                                if p.startswith(":") and p[1:].isdigit():
-                                    env["DISPLAY"] = p
-                                    break
-                    except Exception:
-                        pass
+                # Zadania przeglądarkowe/wyszukiwania/kart wymagają KVM/CDP w premesh, nie konsolowego CLI agy
+                is_browser_task = any(k in prompt_text.lower() for k in (
+                    "wyszukaj", "znajdz", "znajdź", "przegladark", "przeglądark", "tab", "kart", "url", "http", "stron"
+                ))
+                if not is_browser_task:
+                    env = os.environ.copy()
                     if not env.get("DISPLAY"):
-                        env["DISPLAY"] = ":84"
-                try:
-                    cmd = ["agy", "--dangerously-skip-permissions", "-p", prompt_text]
-                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
-                    if res.returncode == 0:
-                        print(res.stdout.strip())
-                        return 0
-                    else:
-                        print(res.stderr or res.stdout, file=sys.stderr)
-                        return res.returncode
-                except Exception as e:
-                    print(f"Błąd uruchomienia bare-metal agy: {e}", file=sys.stderr)
-                    return 1
+                        try:
+                            vnc_proc = subprocess.check_output(["pgrep", "-a", "Xtigervnc"], text=True)
+                            for line in vnc_proc.splitlines():
+                                for p in line.split():
+                                    if p.startswith(":") and p[1:].isdigit():
+                                        env["DISPLAY"] = p
+                                        break
+                        except Exception:
+                            pass
+                        if not env.get("DISPLAY"):
+                            env["DISPLAY"] = ":84"
+                    try:
+                        cmd = ["agy", "--dangerously-skip-permissions", "-p", prompt_text]
+                        res = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=env)
+                        if res.returncode == 0:
+                            print(res.stdout.strip())
+                            return 0
+                        else:
+                            print(res.stderr or res.stdout, file=sys.stderr)
+                            return res.returncode
+                    except subprocess.TimeoutExpired:
+                        print("Błąd: Przekroczono limit czasu (30s) dla bare-metal agy.", file=sys.stderr)
+                        return 124
+                    except Exception as e:
+                        print(f"Błąd uruchomienia bare-metal agy: {e}", file=sys.stderr)
+                        return 1
 
         active = list_active_accounts()
         print(f"Błąd: Kontener '{container.container_name}' nie działa.", file=sys.stderr)
