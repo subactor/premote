@@ -49,18 +49,27 @@ class KVMController:
             raise ContainerError(f"Nie znaleziono okna pasującego do wzorca: {pattern}")
         wid = wids[0]
         self.container.run(
-            ["xdotool", "windowactivate", "--sync", wid],
+            ["xdotool", "windowactivate", wid],
             env={"DISPLAY": self.display},
             check=True,
         )
         return wid
 
     def type_text(self, text: str, delay_ms: int = 50) -> None:
-        self.container.run(
-            ["xdotool", "type", f"--delay={delay_ms}", text],
-            env={"DISPLAY": self.display},
-            check=True,
-        )
+        press_enter = text.endswith("\n")
+        clean_text = text.rstrip("\r\n")
+        if clean_text:
+            self.container.run(
+                ["xdotool", "type", f"--delay={delay_ms}", clean_text],
+                env={"DISPLAY": self.display},
+                check=True,
+            )
+        if press_enter:
+            self.container.run(
+                ["xdotool", "key", "Return"],
+                env={"DISPLAY": self.display},
+                check=True,
+            )
 
     def key(self, key_name: str) -> None:
         self.container.run(

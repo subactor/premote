@@ -163,9 +163,7 @@ class AutopilotSession:
     def _apply_action(self, rule: AutopilotRule) -> None:
         """Apply the action defined by a rule."""
         if rule.action == "key":
-            for key_name in rule.value.split("+"):
-                self.kvm.key(key_name.strip())
-                time.sleep(0.1)
+            self.kvm.key(rule.value.strip())
         elif rule.action == "type":
             self.kvm.type_text(rule.value, delay_ms=30)
         elif rule.action == "click":
@@ -179,9 +177,7 @@ class AutopilotSession:
     def _apply_dialog_action(self, dialog: DialogAction) -> None:
         """Apply one Action DSL decision produced by the dialog decider."""
         if dialog.action == "key":
-            for key_name in dialog.value.split("+"):
-                self.kvm.key(key_name.strip())
-                time.sleep(0.1)
+            self.kvm.key(dialog.value.strip())
         elif dialog.action == "type":
             self.kvm.type_text(dialog.value, delay_ms=30)
         elif dialog.action == "click":
