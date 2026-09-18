@@ -30,6 +30,10 @@ dependencies = [
 test = [
   "pytest>=7.0",
 ]
+vnclone = [
+  "vnclone>=0.1.0",
+]
+
 
 [project.scripts]
 premote = "premote.cli:main"
