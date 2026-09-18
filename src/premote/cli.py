@@ -64,12 +64,26 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
         # Fallback na natywny Google Antigravity (AGY) na maszynie bare-metal
         import shutil
         import subprocess
+        import os
         if shutil.which("agy"):
             if action in {"prompt", "prompt-json", "continue"}:
                 prompt_text = " ".join(args)
+                env = os.environ.copy()
+                if not env.get("DISPLAY"):
+                    try:
+                        vnc_proc = subprocess.check_output(["pgrep", "-a", "Xtigervnc"], text=True)
+                        for line in vnc_proc.splitlines():
+                            for p in line.split():
+                                if p.startswith(":") and p[1:].isdigit():
+                                    env["DISPLAY"] = p
+                                    break
+                    except Exception:
+                        pass
+                    if not env.get("DISPLAY"):
+                        env["DISPLAY"] = ":84"
                 try:
                     cmd = ["agy", "--dangerously-skip-permissions", "-p", prompt_text]
-                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
                     if res.returncode == 0:
                         print(res.stdout.strip())
                         return 0
