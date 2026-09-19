@@ -30,3 +30,9 @@ ENV/
 htmlcov/
 .ruff_cache/
 *.png
+
+# koru runtime artefacts (generated)
+.planfile/.koru/
+.koru/
+.planfile/sprints/*.bak-*
+.cursor/

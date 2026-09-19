@@ -135,6 +135,39 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
                 print(f"Zapisano zrzut ekranu do: {out_file}")
                 return 0
 
+        if action in {"subllm", "llm", "proxy-prompt"}:
+            model = "glm-5.3"
+            filtered_args = []
+            for a in args:
+                if a.startswith("--model="):
+                    model = a.split("=", 1)[1]
+                else:
+                    filtered_args.append(a)
+            prompt_text = " ".join(filtered_args)
+            if not prompt_text:
+                print("Błąd: Podaj prompt dla SubLLM, np. premote local subllm 'Treść'", file=sys.stderr)
+                return 1
+            try:
+                import json
+                import urllib.request
+                req_data = json.dumps({
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt_text}],
+                    "stream": False,
+                }).encode("utf-8")
+                req = urllib.request.Request(
+                    "http://127.0.0.1:11435/v1/chat/completions",
+                    data=req_data,
+                    headers={"Content-Type": "application/json", "X-Ticket": f"premote-{account}"},
+                )
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    res = json.loads(resp.read().decode("utf-8"))
+                    print(res["choices"][0]["message"]["content"])
+                    return 0
+            except Exception as e:
+                print(f"Błąd SubLLM Proxy: {e}", file=sys.stderr)
+                return 1
+
         # Fallback na natywny Google Antigravity (AGY) na maszynie bare-metal
         import shutil
         import subprocess
@@ -174,7 +207,6 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
                         return 124
                     except Exception as e:
                         print(f"Błąd uruchomienia bare-metal agy: {e}", file=sys.stderr)
-                        return 1
 
         active = list_active_accounts()
         c_name = container.container_name if container else f"llm-account-hub-{account}"
@@ -596,7 +628,7 @@ def main() -> int:
         "models", "autopilot", "session-inspect", "decide-dialog", "agy-interactive",
         "exec", "kvm-windows", "screen-text", "kvm-text", "ocr", "kvm-focus",
         "kvm-type", "kvm-key", "kvm-click", "kvm-capture", "planfile-tasks", "tasks",
-        "planfile-agent-prompt",
+        "planfile-agent-prompt", "subllm", "llm", "proxy-prompt",
     }
 
     if len(sys.argv) < 3:
