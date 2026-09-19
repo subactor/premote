@@ -18,6 +18,9 @@ def build_parser() -> argparse.ArgumentParser:
         description="Remote CLI & KVM controller for Google Antigravity (agy) and desktop apps in Docker noVNC containers.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""Przykłady użycia:
+  premote screen-text [window_id]
+  premote kvm-windows
+  premote local screen-text 0x01c0002e
   premote prototypowanie quota
   premote prototypowanie prompt "Napisz oneliner w bashu"
   premote prototypowanie prompt-json "Podaj 3 zalety Dockera"
@@ -59,8 +62,79 @@ def format_quota(report) -> str:
 
 
 def run_account_action(account: str, action: str, args: list[str]) -> int:
-    container = ContainerClient(account)
-    if not container.is_running():
+    is_local = account.lower() in {"local", "host", "baremetal", "native"}
+    container = None
+    container_running = False
+
+    if not is_local:
+        container = ContainerClient(account)
+        try:
+            container_running = container.is_running()
+        except Exception:
+            container_running = False
+
+    kvm_actions = {
+        "kvm-windows", "screen-text", "kvm-text", "ocr",
+        "kvm-focus", "kvm-type", "kvm-key", "kvm-click", "kvm-capture",
+    }
+
+    if not container_running:
+        if is_local or action in kvm_actions:
+            kvm = KVMController(container=None)
+            if action == "kvm-windows":
+                windows = kvm.list_windows()
+                print(f"{'ID':<12} {'PULPIT':<8} {'POZYCJA':<16} {'TYTUŁ OKNA'}")
+                print("-" * 65)
+                for w in windows:
+                    pos = f"{w.x},{w.y} {w.width}x{w.height}"
+                    print(f"{w.id:<12} {w.desktop:<8} {pos:<16} {w.title}")
+                return 0
+
+            elif action in {"screen-text", "kvm-text", "ocr"}:
+                if args and args[0] in {"-h", "--help"}:
+                    print("Użycie: screen-text [WINDOW_ID] | premote [account] screen-text [WINDOW_ID]")
+                    print("Ekstrahuje tekst z okna X11 za pomocą scrot i OCR (tesseract).")
+                    print("\nPrzykłady:")
+                    print("  screen-text 0x01c0002e       Odczytaj tekst z okna o podanym ID")
+                    print("  screen-text                  Odczytaj tekst z aktywnego okna")
+                    print("  premote kvm-windows          Wypisz listę wszystkich otwartych okien")
+                    return 0
+                target_wid = args[0] if args else None
+                txt = kvm.screen_text(target_wid)
+                print(txt)
+                return 0
+
+            elif action == "kvm-focus":
+                pattern = args[0] if args else "Terminal"
+                wid = kvm.focus(pattern)
+                print(f"Aktywowano okno {wid} ({pattern})")
+                return 0
+
+            elif action == "kvm-type":
+                if not args:
+                    print("Błąd: Podaj tekst do wpisania", file=sys.stderr)
+                    return 1
+                kvm.type_text(" ".join(args))
+                return 0
+
+            elif action == "kvm-key":
+                key_name = args[0] if args else "Return"
+                kvm.key(key_name)
+                return 0
+
+            elif action == "kvm-click":
+                x = int(args[0]) if len(args) > 0 else 800
+                y = int(args[1]) if len(args) > 1 else 500
+                kvm.click(x, y)
+                print(f"Kliknięto myszą w punkcie X={x}, Y={y}")
+                return 0
+
+            elif action == "kvm-capture":
+                out_file = args[0] if args else f"capture-{account}.png"
+                kvm.capture(out_file)
+                print(f"Zapisano zrzut ekranu do: {out_file}")
+                return 0
+
         # Fallback na natywny Google Antigravity (AGY) na maszynie bare-metal
         import shutil
         import subprocess
@@ -103,7 +177,8 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
                         return 1
 
         active = list_active_accounts()
-        print(f"Błąd: Kontener '{container.container_name}' nie działa.", file=sys.stderr)
+        c_name = container.container_name if container else f"llm-account-hub-{account}"
+        print(f"Błąd: Kontener '{c_name}' nie działa.", file=sys.stderr)
         if active:
             print("Aktywne konta:", ", ".join(active), file=sys.stderr)
         else:
@@ -201,6 +276,14 @@ def run_account_action(account: str, action: str, args: list[str]) -> int:
             return 0
 
         elif action in {"screen-text", "kvm-text", "ocr"}:
+            if args and args[0] in {"-h", "--help"}:
+                print("Użycie: screen-text [WINDOW_ID] | premote [account] screen-text [WINDOW_ID]")
+                print("Ekstrahuje tekst z okna X11 za pomocą scrot i OCR (tesseract).")
+                print("\nPrzykłady:")
+                print("  screen-text 0x01c0002e       Odczytaj tekst z okna o podanym ID")
+                print("  screen-text                  Odczytaj tekst z aktywnego okna")
+                print("  premote kvm-windows          Wypisz listę wszystkich otwartych okien")
+                return 0
             target_wid = args[0] if args else None
             txt = kvm.screen_text(target_wid)
             print(txt)
@@ -498,14 +581,31 @@ def main() -> int:
         from premote.mcp_server import main as mcp_main
         return mcp_main()
 
+    if first_arg in {"screen-text", "kvm-text", "ocr"}:
+        return run_account_action("local", first_arg, sys.argv[2:])
+
+    if first_arg == "kvm-windows":
+        return run_account_action("local", first_arg, sys.argv[2:])
+
     # Otherwise first argument is <account>
     account = first_arg
     from premote.nl_dsl import parse_nl_to_dsl
+
+    known_actions = {
+        "terminal", "prompt", "prompt-json", "continue", "quota", "quota-json",
+        "models", "autopilot", "session-inspect", "decide-dialog", "agy-interactive",
+        "exec", "kvm-windows", "screen-text", "kvm-text", "ocr", "kvm-focus",
+        "kvm-type", "kvm-key", "kvm-click", "kvm-capture", "planfile-tasks", "tasks",
+        "planfile-agent-prompt",
+    }
 
     if len(sys.argv) < 3:
         # Default to interactive terminal
         action = "terminal"
         action_args: list[str] = []
+    elif sys.argv[2] in known_actions:
+        action = sys.argv[2]
+        action_args = sys.argv[3:]
     else:
         # Check if the remaining arguments form a natural language instruction
         joined_tail = " ".join(sys.argv[2:])

@@ -54,9 +54,15 @@ class NLIntentParser:
         ),
         # Screenshots / Capture
         (
-            re.compile(r"^(?:zr[oó]b|wykonaj|pobierz|take|make|capture)?\s*(?:zrzut(?:\s+ekranu)?|screenshot|screen(?:\s*capture)?|snapshot)(?:\s+(?:do\s+)?([^\s]+))?$", re.I),
+            re.compile(r"^(?:zr[oó]b|wykonaj|pobierz|take|make|capture)?\s*(?:zrzut(?:\s+ekranu)?|screenshot|screen(?:\s+capture)?|snapshot)\b(?:\s+(?:do\s+)?([^\s]+))?$", re.I),
             "kvm.capture",
             lambda m: ["kvm-capture", m.group(1)] if m.group(1) else ["kvm-capture"],
+        ),
+        # Screen Text / OCR
+        (
+            re.compile(r"^(?:odczytaj(?:\s+tekst)?|screen-text|screen_text|ocr|read(?:\s+text)?)\s*(?:z(?:\s+okna)?|from(?:\s+window)?)?\s*(0x[0-9a-fA-F]+|\d+)?$", re.I),
+            "kvm.screen_text",
+            lambda m: ["screen-text", m.group(1)] if m.group(1) else ["screen-text"],
         ),
         # Windows listing
         (
@@ -128,6 +134,9 @@ class NLIntentParser:
         "kvm-type": "kvm.type",
         "kvm-key": "kvm.key",
         "kvm-capture": "kvm.capture",
+        "screen-text": "kvm.screen_text",
+        "kvm-text": "kvm.screen_text",
+        "ocr": "kvm.screen_text",
         "autopilot": "dialog.autopilot",
         "auto-approve-all": "dialog.autopilot",
     }
